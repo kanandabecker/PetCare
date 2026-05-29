@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "PetCare",
+    "slug": "petcare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B6B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "PetCare usa sua localização para encontrar ONGs próximas.",
+        "NSCameraUsageDescription": "PetCare usa a câmera para adicionar fotos dos pets.",
+        "NSPhotoLibraryUsageDescription": "PetCare acessa sua galeria para selecionar fotos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6B6B"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-image-picker",
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FF6B6B"
+        }
+      ]
+    ]
+  }
+}
