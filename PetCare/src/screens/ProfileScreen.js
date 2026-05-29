@@ -13,6 +13,7 @@ import * as Notifications from 'expo-notifications';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
+import { useFavorites } from './../context/Favorites';
 
 // Configurar handler de notificações
 Notifications.setNotificationHandler({
@@ -38,8 +39,13 @@ export default function ProfileScreen({ navigation }) {
   const [notifDicas, setNotifDicas] = useState(false);
   const [permissaoNotif, setPermissaoNotif] = useState(false);
 
-  const petsFavoritos = PETS.filter(p => p.favorito);
-  const totalFavoritos = petsFavoritos.length;
+  const {
+    favorites,
+    clearFavorites,
+  } = useFavorites();
+
+  const petsFavoritos = favorites;
+  const totalFavoritos = favorites.length;
 
   useEffect(() => {
     verificarPermissaoNotif();
@@ -89,8 +95,22 @@ export default function ProfileScreen({ navigation }) {
       'Limpar favoritos?',
       'Todos os pets favoritados serão removidos da lista.',
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Limpar', style: 'destructive', onPress: () => Alert.alert('Favoritos limpos!') },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Limpar',
+          style: 'destructive',
+          onPress: () => {
+            clearFavorites();
+
+            Alert.alert(
+              'Favoritos limpos!',
+              'Sua lista de favoritos foi esvaziada.'
+            );
+          },
+        },
       ]
     );
   };

@@ -13,17 +13,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
+import { useFavorites } from '../context/Favorites';
 
 const { width } = Dimensions.get('window');
 
-// Estatísticas rápidas
 const STATS = [
   { icon: 'paw', label: 'Pets disponíveis', value: PETS.length, color: '#FFE0E0' },
   { icon: 'home-outline', label: 'Adotados este mês', value: 23, color: '#E0F7F5' },
   { icon: 'business-outline', label: 'ONGs parceiras', value: 3, color: '#FFF9E0' },
 ];
 
-// Categorias de pets
 const CATEGORIAS = [
   { label: 'Todos', icon: '🐾', filter: null },
   { label: 'Cachorros', icon: '🐶', filter: 'Cachorro' },
@@ -37,6 +36,8 @@ export default function HomeScreen({ navigation }) {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(0);
 
+  const { isFavorite } = useFavorites();
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
@@ -44,13 +45,12 @@ export default function HomeScreen({ navigation }) {
     ]).start();
   }, []);
 
-  // Filtragem de destaques
   const petsFiltrados = PETS.filter(p => {
     const cat = CATEGORIAS[categoriaSelecionada];
     if (!cat.filter) return true;
     if (cat.campo === 'porte') return p.porte === cat.filter;
     return p.especie === cat.filter;
-  }).slice(0, 4);
+  }).slice(0, 6);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -81,7 +81,7 @@ export default function HomeScreen({ navigation }) {
             {PETS.length} pets esperando por um lar com amor
           </Text>
 
-          {/* Busca rápida */}
+          {/* Busca rápida — navega para a tela de lista */}
           <TouchableOpacity
             style={styles.searchBar}
             onPress={() => navigation.navigate('Lista')}
@@ -98,10 +98,7 @@ export default function HomeScreen({ navigation }) {
         {STATS.map((s, i) => (
           <Animated.View
             key={i}
-            style={[
-              styles.statCard,
-              { backgroundColor: s.color, opacity: fadeAnim },
-            ]}
+            style={[styles.statCard, { backgroundColor: s.color, opacity: fadeAnim }]}
           >
             <Ionicons name={s.icon} size={22} color={COLORS.primary} />
             <Text style={styles.statValue}>{s.value}</Text>
@@ -117,10 +114,7 @@ export default function HomeScreen({ navigation }) {
           {CATEGORIAS.map((cat, i) => (
             <TouchableOpacity
               key={i}
-              style={[
-                styles.catBtn,
-                categoriaSelecionada === i && styles.catBtnActive,
-              ]}
+              style={[styles.catBtn, categoriaSelecionada === i && styles.catBtnActive]}
               onPress={() => setCategoriaSelecionada(i)}
             >
               <Text style={styles.catIcon}>{cat.icon}</Text>
@@ -159,6 +153,11 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons name="location-outline" size={12} color={COLORS.textLight} />
                 <Text style={styles.featuredCidade}>{pet.cidade.split(',')[0]}</Text>
               </View>
+              {isFavorite(pet.id) && (
+                <View style={styles.favBadge}>
+                  <Ionicons name="heart" size={12} color={COLORS.primary} />
+                </View>
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -188,7 +187,7 @@ export default function HomeScreen({ navigation }) {
         </LinearGradient>
       </View>
 
-      {/* Acesso rápido aos sensores */}
+      {/* Ferramentas */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Ferramentas</Text>
         <View style={styles.toolsGrid}>
@@ -246,7 +245,6 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  // Hero
   hero: {
     paddingTop: 56,
     paddingBottom: SPACING.xl,
@@ -279,7 +277,6 @@ const styles = StyleSheet.create({
   },
   searchPlaceholder: { fontSize: FONTS.sizes.md, color: COLORS.textMuted },
 
-  // Stats
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.md,
@@ -296,13 +293,21 @@ const styles = StyleSheet.create({
   statValue: { fontSize: FONTS.sizes.lg, fontWeight: '900', color: COLORS.text },
   statLabel: { fontSize: 9, color: COLORS.textLight, textAlign: 'center' },
 
-  // Sections
   section: { paddingHorizontal: SPACING.md, paddingTop: SPACING.lg },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  sectionTitle: { fontSize: FONTS.sizes.lg, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: FONTS.sizes.lg,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
   verTodos: { fontSize: FONTS.sizes.sm, color: COLORS.primary, fontWeight: '700' },
 
-  // Categorias
   categoriesRow: { marginHorizontal: -SPACING.md, paddingLeft: SPACING.md },
   catBtn: {
     flexDirection: 'row',
@@ -321,21 +326,28 @@ const styles = StyleSheet.create({
   catLabel: { fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
   catLabelActive: { color: COLORS.white },
 
-  // Featured cards
   featuredCard: {
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginRight: SPACING.sm,
     width: 140,
     alignItems: 'center',
+    position: 'relative',
   },
   featuredEmoji: { fontSize: 48, marginBottom: SPACING.xs },
   featuredNome: { fontSize: FONTS.sizes.md, fontWeight: '800', color: COLORS.text },
   featuredRaca: { fontSize: FONTS.sizes.xs, color: COLORS.textLight, marginBottom: SPACING.xs },
   featuredFooter: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   featuredCidade: { fontSize: FONTS.sizes.xs, color: COLORS.textLight },
+  favBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.full,
+    padding: 4,
+  },
 
-  // Banner
   banner: {
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
@@ -343,11 +355,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bannerTitle: { fontSize: FONTS.sizes.md, fontWeight: '800', color: COLORS.white, marginBottom: 4 },
-  bannerSub: { fontSize: FONTS.sizes.xs, color: 'rgba(255,255,255,0.85)', marginBottom: SPACING.sm },
-  bannerBtn: { backgroundColor: COLORS.white, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 6, alignSelf: 'flex-start' },
+  bannerSub: {
+    fontSize: FONTS.sizes.xs,
+    color: 'rgba(255,255,255,0.85)',
+    marginBottom: SPACING.sm,
+  },
+  bannerBtn: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
   bannerBtnText: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.secondary },
 
-  // Tools
   toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   toolCard: {
     width: (width - SPACING.md * 2 - SPACING.sm) / 2,
@@ -361,7 +382,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  toolIcon: { width: 48, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
+  toolIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   toolLabel: { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
   toolSub: { fontSize: FONTS.sizes.xs, color: COLORS.textLight },
 });

@@ -1,367 +1,413 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  TextInput,
   Dimensions,
   Animated,
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
+import PetCard from '../components/PetCard';
+import { useFavorites } from '../context/Favorites';
 
 const { width } = Dimensions.get('window');
 
-// Estatísticas rápidas
-const STATS = [
-  { icon: 'paw', label: 'Pets disponíveis', value: PETS.length, color: '#FFE0E0' },
-  { icon: 'home-outline', label: 'Adotados este mês', value: 23, color: '#E0F7F5' },
-  { icon: 'business-outline', label: 'ONGs parceiras', value: 3, color: '#FFF9E0' },
+const FILTROS_ESPECIE = [
+  { label: 'Todos', value: null },
+  { label: 'Cachorros', value: 'Cachorro' },
+  { label: 'Gatos', value: 'Gato' },
 ];
 
-// Categorias de pets
-const CATEGORIAS = [
-  { label: 'Todos', icon: '🐾', filter: null },
-  { label: 'Cachorros', icon: '🐶', filter: 'Cachorro' },
-  { label: 'Gatos', icon: '🐱', filter: 'Gato' },
-  { label: 'Pequenos', icon: '🐩', filter: 'Pequeno', campo: 'porte' },
-  { label: 'Grandes', icon: '🐕', filter: 'Grande', campo: 'porte' },
+const FILTROS_PORTE = [
+  { label: 'Qualquer porte', value: null },
+  { label: 'Pequeno', value: 'Pequeno' },
+  { label: 'Médio', value: 'Médio' },
+  { label: 'Grande', value: 'Grande' },
 ];
 
-export default function HomeScreen({ navigation }) {
+export default function ListScreen({ navigation }) {
+  const [busca, setBusca] = useState('');
+  const [filtroEspecie, setFiltroEspecie] = useState(null);
+  const [filtroPorte, setFiltroPorte] = useState(null);
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState(0);
+
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  // Filtragem de destaques
-  const petsFiltrados = PETS.filter(p => {
-    const cat = CATEGORIAS[categoriaSelecionada];
-    if (!cat.filter) return true;
-    if (cat.campo === 'porte') return p.porte === cat.filter;
-    return p.especie === cat.filter;
-  }).slice(0, 4);
+  const petsFiltrados = PETS.filter(pet => {
+    const termoBusca = busca.toLowerCase();
+    const matchBusca =
+      !busca ||
+      pet.nome.toLowerCase().includes(termoBusca) ||
+      pet.raca.toLowerCase().includes(termoBusca) ||
+      pet.cidade.toLowerCase().includes(termoBusca) ||
+      pet.especie.toLowerCase().includes(termoBusca);
+
+    const matchEspecie = !filtroEspecie || pet.especie === filtroEspecie;
+    const matchPorte = !filtroPorte || pet.porte === filtroPorte;
+
+    return matchBusca && matchEspecie && matchPorte;
+  });
+
+  const handleFavorite = (pet) => {
+    toggleFavorite(pet);
+  };
+
+  const petComFavorito = (pet) => ({
+    ...pet,
+    favorito: isFavorite(pet.id),
+  });
+
+  const limparFiltros = () => {
+    setBusca('');
+    setFiltroEspecie(null);
+    setFiltroPorte(null);
+  };
+
+  const temFiltroAtivo = busca || filtroEspecie || filtroPorte;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
 
-      {/* Header Hero */}
-      <LinearGradient
-        colors={[COLORS.primary, '#FF8E8E']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
-      >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.greeting}>Olá, adotante! 👋</Text>
-              <Text style={styles.heroTitle}>Encontre seu{'\n'}melhor amigo 🐾</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.notifBtn}
-              onPress={() => navigation.navigate('Perfil')}
-            >
-              <Ionicons name="notifications-outline" size={24} color={COLORS.white} />
-            </TouchableOpacity>
+      {/* Header fixo */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTitle}>Pets para adoção 🐾</Text>
+            <Text style={styles.headerSub}>
+              {petsFiltrados.length} de {PETS.length} pets disponíveis
+            </Text>
           </View>
-
-          <Text style={styles.heroSub}>
-            {PETS.length} pets esperando por um lar com amor
-          </Text>
-
-          {/* Busca rápida */}
           <TouchableOpacity
-            style={styles.searchBar}
-            onPress={() => navigation.navigate('Lista')}
-            activeOpacity={0.9}
+            style={[styles.filtroBtn, mostrarFiltros && styles.filtroBtnAtivo]}
+            onPress={() => setMostrarFiltros(!mostrarFiltros)}
           >
-            <Ionicons name="search" size={20} color={COLORS.textMuted} />
-            <Text style={styles.searchPlaceholder}>Buscar pets por nome, raça...</Text>
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={mostrarFiltros ? COLORS.white : COLORS.primary}
+            />
           </TouchableOpacity>
-        </Animated.View>
-      </LinearGradient>
+        </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        {STATS.map((s, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.statCard,
-              { backgroundColor: s.color, opacity: fadeAnim },
-            ]}
-          >
-            <Ionicons name={s.icon} size={22} color={COLORS.primary} />
-            <Text style={styles.statValue}>{s.value}</Text>
-            <Text style={styles.statLabel}>{s.label}</Text>
-          </Animated.View>
-        ))}
-      </View>
+        {/* Barra de busca */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por nome, raça, cidade..."
+            placeholderTextColor={COLORS.textMuted}
+            value={busca}
+            onChangeText={setBusca}
+            returnKeyType="search"
+          />
+          {busca.length > 0 && (
+            <TouchableOpacity onPress={() => setBusca('')}>
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-      {/* Categorias */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Categorias</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesRow}>
-          {CATEGORIAS.map((cat, i) => (
+        {/* Filtros de espécie rápidos */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.especieRow}>
+          {FILTROS_ESPECIE.map((f) => (
             <TouchableOpacity
-              key={i}
+              key={f.label}
               style={[
-                styles.catBtn,
-                categoriaSelecionada === i && styles.catBtnActive,
+                styles.especieBtn,
+                filtroEspecie === f.value && styles.especieBtnAtivo,
               ]}
-              onPress={() => setCategoriaSelecionada(i)}
+              onPress={() => setFiltroEspecie(f.value)}
             >
-              <Text style={styles.catIcon}>{cat.icon}</Text>
-              <Text style={[
-                styles.catLabel,
-                categoriaSelecionada === i && styles.catLabelActive,
-              ]}>
-                {cat.label}
+              <Text
+                style={[
+                  styles.especieBtnText,
+                  filtroEspecie === f.value && styles.especieBtnTextAtivo,
+                ]}
+              >
+                {f.label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
 
-      {/* Pets em destaque */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Em destaque</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Lista')}>
-            <Text style={styles.verTodos}>Ver todos →</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {petsFiltrados.map(pet => (
-            <TouchableOpacity
-              key={pet.id}
-              style={[styles.featuredCard, { backgroundColor: pet.cor_card }]}
-              onPress={() => navigation.navigate('Detalhes', { pet })}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.featuredEmoji}>{pet.emoji}</Text>
-              <Text style={styles.featuredNome}>{pet.nome}</Text>
-              <Text style={styles.featuredRaca}>{pet.raca}</Text>
-              <View style={styles.featuredFooter}>
-                <Ionicons name="location-outline" size={12} color={COLORS.textLight} />
-                <Text style={styles.featuredCidade}>{pet.cidade.split(',')[0]}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Banner de adoção responsável */}
-      <View style={styles.section}>
-        <LinearGradient
-          colors={[COLORS.secondary, '#38B2A8']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.banner}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bannerTitle}>Adote com responsabilidade 💙</Text>
-            <Text style={styles.bannerSub}>
-              Adotar é um compromisso para a vida toda. Saiba como se preparar.
-            </Text>
-            <TouchableOpacity
-              style={styles.bannerBtn}
-              onPress={() => navigation.navigate('Perfil')}
-            >
-              <Text style={styles.bannerBtnText}>Saiba mais</Text>
-            </TouchableOpacity>
+        {/* Painel de filtros expandido */}
+        {mostrarFiltros && (
+          <View style={styles.filtrosPanel}>
+            <Text style={styles.filtrosTitulo}>Filtrar por porte</Text>
+            <View style={styles.filtrosPorteRow}>
+              {FILTROS_PORTE.map((f) => (
+                <TouchableOpacity
+                  key={f.label}
+                  style={[
+                    styles.porteBtn,
+                    filtroPorte === f.value && styles.porteBtnAtivo,
+                  ]}
+                  onPress={() => setFiltroPorte(f.value)}
+                >
+                  <Text
+                    style={[
+                      styles.porteBtnText,
+                      filtroPorte === f.value && styles.porteBtnTextAtivo,
+                    ]}
+                  >
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-          <Text style={{ fontSize: 60 }}>🏡</Text>
-        </LinearGradient>
+        )}
       </View>
 
-      {/* Acesso rápido aos sensores */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ferramentas</Text>
-        <View style={styles.toolsGrid}>
-          <TouchableOpacity
-            style={styles.toolCard}
-            onPress={() => navigation.navigate('Localização')}
-          >
-            <LinearGradient colors={['#FF6B6B', '#FF8E8E']} style={styles.toolIcon}>
-              <Ionicons name="location" size={24} color={COLORS.white} />
-            </LinearGradient>
-            <Text style={styles.toolLabel}>ONGs próximas</Text>
-            <Text style={styles.toolSub}>Ver no mapa</Text>
+      {/* Lista de pets */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+      >
+        {/* Badge de filtro ativo */}
+        {temFiltroAtivo && (
+          <TouchableOpacity style={styles.limparFiltros} onPress={limparFiltros}>
+            <Ionicons name="close-circle-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.limparFiltrosText}>Limpar filtros</Text>
           </TouchableOpacity>
+        )}
 
-          <TouchableOpacity
-            style={styles.toolCard}
-            onPress={() => navigation.navigate('Camera')}
-          >
-            <LinearGradient colors={['#4ECDC4', '#38B2A8']} style={styles.toolIcon}>
-              <Ionicons name="camera" size={24} color={COLORS.white} />
-            </LinearGradient>
-            <Text style={styles.toolLabel}>Registrar pet</Text>
-            <Text style={styles.toolSub}>Câmera / Galeria</Text>
-          </TouchableOpacity>
+        {petsFiltrados.length === 0 ? (
+          <Animated.View style={[styles.empty, { opacity: fadeAnim }]}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={styles.emptyTitle}>Nenhum pet encontrado</Text>
+            <Text style={styles.emptySub}>
+              Tente buscar por outro nome, raça ou cidade
+            </Text>
+            <TouchableOpacity style={styles.emptyBtn} onPress={limparFiltros}>
+              <Text style={styles.emptyBtnText}>Ver todos os pets</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ) : (
+          <Animated.View style={[styles.grid, { opacity: fadeAnim }]}>
+            {petsFiltrados.map((pet) => (
+              <PetCard
+                key={pet.id}
+                pet={petComFavorito(pet)}
+                onPress={() => navigation.navigate('Detalhes', { pet: petComFavorito(pet) })}
+                onFavorite={() => handleFavorite(pet)}
+              />
+            ))}
+          </Animated.View>
+        )}
 
-          <TouchableOpacity
-            style={styles.toolCard}
-            onPress={() => navigation.navigate('Sensores')}
-          >
-            <LinearGradient colors={['#FFE66D', '#FFC107']} style={styles.toolIcon}>
-              <Ionicons name="phone-portrait" size={24} color={COLORS.white} />
-            </LinearGradient>
-            <Text style={styles.toolLabel}>Sensor pet</Text>
-            <Text style={styles.toolSub}>Acelerômetro</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolCard}
-            onPress={() => navigation.navigate('Perfil')}
-          >
-            <LinearGradient colors={['#A29BFE', '#6C63FF']} style={styles.toolIcon}>
-              <Ionicons name="person" size={24} color={COLORS.white} />
-            </LinearGradient>
-            <Text style={styles.toolLabel}>Meu perfil</Text>
-            <Text style={styles.toolSub}>Favoritos</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={{ height: SPACING.xxl }} />
-    </ScrollView>
+        <View style={{ height: SPACING.xxl }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  // Hero
-  hero: {
-    paddingTop: 56,
-    paddingBottom: SPACING.xl,
+  // Header
+  header: {
+    backgroundColor: COLORS.white,
+    paddingTop: 52,
     paddingHorizontal: SPACING.md,
-    borderBottomLeftRadius: RADIUS.xl,
-    borderBottomRightRadius: RADIUS.xl,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  heroTop: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: SPACING.sm,
   },
-  greeting: { fontSize: FONTS.sizes.md, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
-  heroTitle: { fontSize: FONTS.sizes.xxl, fontWeight: '900', color: COLORS.white, lineHeight: 36 },
-  heroSub: { fontSize: FONTS.sizes.sm, color: 'rgba(255,255,255,0.8)', marginBottom: SPACING.md },
-  notifBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: RADIUS.full,
-    padding: 10,
+  headerTitle: {
+    fontSize: FONTS.sizes.xl,
+    fontWeight: '900',
+    color: COLORS.text,
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 4,
+  headerSub: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textLight,
+    marginTop: 2,
   },
-  searchPlaceholder: { fontSize: FONTS.sizes.md, color: COLORS.textMuted },
-
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    gap: SPACING.sm,
-  },
-  statCard: {
-    flex: 1,
+  filtroBtn: {
+    backgroundColor: COLORS.primaryLight,
     borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    alignItems: 'center',
-    gap: 3,
+    padding: 10,
+    borderWidth: 2,
+    borderColor: COLORS.primaryLight,
   },
-  statValue: { fontSize: FONTS.sizes.lg, fontWeight: '900', color: COLORS.text },
-  statLabel: { fontSize: 9, color: COLORS.textLight, textAlign: 'center' },
+  filtroBtnAtivo: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
 
-  // Sections
-  section: { paddingHorizontal: SPACING.md, paddingTop: SPACING.lg },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  sectionTitle: { fontSize: FONTS.sizes.lg, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm },
-  verTodos: { fontSize: FONTS.sizes.sm, color: COLORS.primary, fontWeight: '700' },
-
-  // Categorias
-  categoriesRow: { marginHorizontal: -SPACING.md, paddingLeft: SPACING.md },
-  catBtn: {
+  // Search
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.white,
+    gap: SPACING.sm,
+    backgroundColor: COLORS.background,
     borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    marginRight: SPACING.sm,
-    borderWidth: 2,
+    marginBottom: SPACING.sm,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  catBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  catIcon: { fontSize: 16 },
-  catLabel: { fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
-  catLabelActive: { color: COLORS.white },
-
-  // Featured cards
-  featuredCard: {
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginRight: SPACING.sm,
-    width: 140,
-    alignItems: 'center',
+  searchInput: {
+    flex: 1,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    padding: 0,
   },
-  featuredEmoji: { fontSize: 48, marginBottom: SPACING.xs },
-  featuredNome: { fontSize: FONTS.sizes.md, fontWeight: '800', color: COLORS.text },
-  featuredRaca: { fontSize: FONTS.sizes.xs, color: COLORS.textLight, marginBottom: SPACING.xs },
-  featuredFooter: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  featuredCidade: { fontSize: FONTS.sizes.xs, color: COLORS.textLight },
 
-  // Banner
-  banner: {
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
+  // Filtros espécie
+  especieRow: {
+    marginHorizontal: -SPACING.md,
+    paddingLeft: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  especieBtn: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.background,
+    marginRight: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  especieBtnAtivo: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  especieBtnText: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '700',
+    color: COLORS.textLight,
+  },
+  especieBtnTextAtivo: {
+    color: COLORS.white,
+  },
+
+  // Painel filtros
+  filtrosPanel: {
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: SPACING.xs,
+  },
+  filtrosTitulo: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  filtrosPorteRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  porteBtn: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.background,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  porteBtnAtivo: {
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
+  },
+  porteBtnText: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '700',
+    color: COLORS.textLight,
+  },
+  porteBtnTextAtivo: {
+    color: COLORS.white,
+  },
+
+  // Limpar filtros
+  limparFiltros: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  bannerTitle: { fontSize: FONTS.sizes.md, fontWeight: '800', color: COLORS.white, marginBottom: 4 },
-  bannerSub: { fontSize: FONTS.sizes.xs, color: 'rgba(255,255,255,0.85)', marginBottom: SPACING.sm },
-  bannerBtn: { backgroundColor: COLORS.white, borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: 6, alignSelf: 'flex-start' },
-  bannerBtnText: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.secondary },
-
-  // Tools
-  toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  toolCard: {
-    width: (width - SPACING.md * 2 - SPACING.sm) / 2,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
     gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    alignSelf: 'flex-end',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.full,
+    marginBottom: SPACING.sm,
   },
-  toolIcon: { width: 48, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
-  toolLabel: { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
-  toolSub: { fontSize: FONTS.sizes.xs, color: COLORS.textLight },
+  limparFiltrosText: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  // Lista
+  listContent: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  // Empty state
+  empty: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxl,
+    gap: SPACING.sm,
+  },
+  emptyEmoji: { fontSize: 56 },
+  emptyTitle: {
+    fontSize: FONTS.sizes.xl,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  emptySub: {
+    fontSize: FONTS.sizes.md,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  emptyBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 4,
+    marginTop: SPACING.sm,
+  },
+  emptyBtnText: {
+    fontSize: FONTS.sizes.md,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
 });

@@ -15,19 +15,23 @@ import * as Notifications from 'expo-notifications';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { CheckBadge, InfoBadge } from '../components/InfoBadge';
 import Button from '../components/Button';
+import { useFavorites } from './../context/Favorites';
 
 export default function DetailScreen({ route, navigation }) {
   const { pet } = route.params;
-  const [favorito, setFavorito] = useState(pet.favorito || false);
   const [interesse, setInteresse] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const { toggleFavorite, isFavorite } = useFavorites();
+
+  const favorito = isFavorite(pet.id);
 
   const handleFavorite = () => {
     Animated.sequence([
       Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, friction: 3 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
-    setFavorito(v => !v);
+    toggleFavorite(pet);
   };
 
   const handleAdotar = async () => {
@@ -66,7 +70,7 @@ export default function DetailScreen({ route, navigation }) {
         message: `Conheça ${pet.nome}, um ${pet.raca} de ${pet.idade} esperando por um lar! 🐾 Acesse o app PetLar para saber mais.`,
         title: `Adote ${pet.nome}!`,
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   return (
