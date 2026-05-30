@@ -14,7 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 
-export default function CameraScreen() {
+export default function CameraScreen({ navigation }) {
   const [foto, setFoto] = useState(null);
   const [modo, setModo] = useState(null); // 'camera' | 'galeria'
   const [info, setInfo] = useState(null);
@@ -88,11 +88,14 @@ export default function CameraScreen() {
   };
 
   const salvar = () => {
-    Alert.alert(
-      '✅ Foto salva!',
-      'A foto do pet foi registrada e pode ser usada no processo de adoção.',
-      [{ text: 'OK' }]
-    );
+    if (!foto) {
+      Alert.alert('Erro', 'Tire uma foto primeiro.');
+      return;
+    }
+
+    navigation.navigate('PetRecords', {
+      pet: { foto },
+    });
   };
 
   return (

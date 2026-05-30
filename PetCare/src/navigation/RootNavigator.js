@@ -5,6 +5,8 @@ import DetailScreen from '../screens/DetailScreen';
 import LocationScreen from '../screens/LocationScreen';
 import CameraScreen from '../screens/CameraScreen';
 import SensorScreen from '../screens/SensorScreen';
+import AdoptionFormScreen from '../screens/AdoptionFormScreen';
+import PetRecordsScreen from '../screens/PetRecordsScreen';
 import { COLORS, FONTS } from '../data/theme';
 
 const Stack = createNativeStackNavigator();
@@ -71,6 +73,25 @@ export default function RootNavigator() {
             headerStyle: { backgroundColor: COLORS.white },
           }}
         />
+
+        <Stack.Screen
+          name="AdoptionForm"
+          component={AdoptionFormScreen}
+          options={{
+            title: 'Formulário de Adoção',
+            headerStyle: { backgroundColor: COLORS.white },
+          }}
+        />
+
+        <Stack.Screen
+          name="PetRecords"
+          component={PetRecordsScreen}
+          options={{
+            title: 'Cadastrar pet',
+            headerStyle: { backgroundColor: COLORS.white },
+          }}
+        />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

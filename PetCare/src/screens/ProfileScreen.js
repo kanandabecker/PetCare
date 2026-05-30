@@ -7,22 +7,14 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
 import { useFavorites } from './../context/Favorites';
-
-// Configurar handler de notificações
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DICAS_ADOCAO = [
   'Pesquise sobre a raça antes de adotar',
@@ -32,6 +24,8 @@ const DICAS_ADOCAO = [
   'Prepare o espaço com cama, tigelas e brinquedos',
   'Leve ao veterinário na primeira semana',
 ];
+
+
 
 export default function ProfileScreen({ navigation }) {
   const [notifAtivas, setNotifAtivas] = useState(true);
@@ -47,50 +41,61 @@ export default function ProfileScreen({ navigation }) {
   const petsFavoritos = favorites;
   const totalFavoritos = favorites.length;
 
+  const salvarConfiguracoes = async (
+    ativas,
+    novos,
+    dicas
+  ) => {
+    try {
+      await AsyncStorage.setItem(
+        'configNotificacoes',
+        JSON.stringify({
+          notifAtivas: ativas,
+          notifNovos: novos,
+          notifDicas: dicas,
+        })
+      );
+    } catch (error) {
+      console.log('Erro ao salvar configurações', error);
+    }
+  };
+
   useEffect(() => {
-    verificarPermissaoNotif();
+    carregarConfiguracoes();
   }, []);
 
-  const verificarPermissaoNotif = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    setPermissaoNotif(status === 'granted');
-    if (status !== 'granted') {
-      const { status: newStatus } = await Notifications.requestPermissionsAsync();
-      setPermissaoNotif(newStatus === 'granted');
-    }
-  };
+  const carregarConfiguracoes = async () => {
+    try {
+      const dados = await AsyncStorage.getItem(
+        'configNotificacoes'
+      );
 
-  const enviarNotificacaoTeste = async () => {
-    if (!permissaoNotif) {
-      Alert.alert('Permissão necessária', 'Habilite as notificações nas configurações.');
-      return;
-    }
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🐾 PetLar — Novo pet disponível!',
-        body: 'Um Labrador filhote está esperando por um lar. Clique para ver!',
-        sound: true,
-        data: { tipo: 'novo_pet' },
-      },
-      trigger: { seconds: 1 },
-    });
-    Alert.alert('✅ Notificação enviada!', 'Você receberá a notificação em 1 segundo.');
-  };
+      if (dados) {
+        const config = JSON.parse(dados);
 
-  const enviarNotificacaoDica = async () => {
-    const dica = DICAS_ADOCAO[Math.floor(Math.random() * DICAS_ADOCAO.length)];
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '💡 Dica de adoção responsável',
-        body: dica,
-        sound: false,
-      },
-      trigger: { seconds: 2 },
-    });
-    Alert.alert('💡 Dica enviada!', `"${dica}"`);
+        setNotifAtivas(config.notifAtivas);
+        setNotifNovos(config.notifNovos);
+        setNotifDicas(config.notifDicas);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const limparFavoritos = () => {
+    if (Platform.OS === 'web') {
+      const confirmar = window.confirm(
+        'Limpar favoritos?\n\nTodos os pets favoritados serão removidos da lista.'
+      );
+
+      if (confirmar) {
+        clearFavorites();
+        window.alert('Favoritos limpos!\n\nSua lista foi esvaziada.');
+      }
+
+      return;
+    }
+
     Alert.alert(
       'Limpar favoritos?',
       'Todos os pets favoritados serão removidos da lista.',
@@ -157,6 +162,7 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
+
         {totalFavoritos === 0 ? (
           <View style={styles.emptyFav}>
             <Text style={{ fontSize: 40 }}>🤍</Text>
@@ -202,7 +208,15 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Switch
               value={notifAtivas}
-              onValueChange={setNotifAtivas}
+              onValueChange={(value) => {
+                setNotifAtivas(value);
+
+                salvarConfiguracoes(
+                  value,
+                  notifNovos,
+                  notifDicas
+                );
+              }} ValueChange={setNotifAtivas}
               trackColor={{ false: '#CCC', true: COLORS.primaryLight }}
               thumbColor={notifAtivas ? COLORS.primary : '#FFF'}
             />
@@ -215,7 +229,15 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Switch
               value={notifNovos}
-              onValueChange={setNotifNovos}
+              onValueChange={(value) => {
+                setNotifAtivas(value);
+
+                salvarConfiguracoes(
+                  value,
+                  notifNovos,
+                  notifDicas
+                );
+              }}
               disabled={!notifAtivas}
               trackColor={{ false: '#CCC', true: COLORS.primaryLight }}
               thumbColor={notifNovos ? COLORS.primary : '#FFF'}
@@ -229,25 +251,20 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Switch
               value={notifDicas}
-              onValueChange={setNotifDicas}
+              onValueChange={(value) => {
+                setNotifDicas(value);
+
+                salvarConfiguracoes(
+                  notifAtivas,
+                  notifNovos,
+                  value
+                );
+              }}
               disabled={!notifAtivas}
               trackColor={{ false: '#CCC', true: COLORS.primaryLight }}
               thumbColor={notifDicas ? COLORS.primary : '#FFF'}
             />
           </View>
-        </View>
-
-        {/* Testes de notificação */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Testar notificações</Text>
-          <TouchableOpacity style={styles.notifTestBtn} onPress={enviarNotificacaoTeste}>
-            <Ionicons name="notifications" size={18} color={COLORS.primary} />
-            <Text style={styles.notifTestText}>Enviar notificação de novo pet</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.notifTestBtn} onPress={enviarNotificacaoDica}>
-            <Ionicons name="bulb-outline" size={18} color={COLORS.secondary} />
-            <Text style={[styles.notifTestText, { color: COLORS.secondary }]}>Enviar dica de adoção</Text>
-          </TouchableOpacity>
         </View>
       </View>
 

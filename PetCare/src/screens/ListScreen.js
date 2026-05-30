@@ -15,6 +15,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
 import PetCard from '../components/PetCard';
 import { useFavorites } from '../context/Favorites';
+import { usePets } from '../context/Pets';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,8 @@ export default function ListScreen({ navigation }) {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  const { petsAdocao } = usePets();
+
   const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
@@ -48,14 +51,16 @@ export default function ListScreen({ navigation }) {
     }).start();
   }, []);
 
-  const petsFiltrados = PETS.filter(pet => {
+  const listaCompleta = [...petsAdocao, ...PETS];
+
+  const petsFiltrados = listaCompleta.filter(pet => {
     const termoBusca = busca.toLowerCase();
     const matchBusca =
       !busca ||
-      pet.nome.toLowerCase().includes(termoBusca) ||
-      pet.raca.toLowerCase().includes(termoBusca) ||
-      pet.cidade.toLowerCase().includes(termoBusca) ||
-      pet.especie.toLowerCase().includes(termoBusca);
+      pet.nome?.toLowerCase().includes(termoBusca) ||
+      pet.raca?.toLowerCase().includes(termoBusca) ||
+      pet.cidade?.toLowerCase().includes(termoBusca) ||
+      pet.especie?.toLowerCase().includes(termoBusca);
 
     const matchEspecie = !filtroEspecie || pet.especie === filtroEspecie;
     const matchPorte = !filtroPorte || pet.porte === filtroPorte;
