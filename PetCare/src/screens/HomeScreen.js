@@ -8,20 +8,16 @@ import {
   Dimensions,
   Animated,
   StatusBar,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { PETS } from '../data/pets';
 import { useFavorites } from '../context/Favorites';
+import { usePets } from '../context/Pets';
 
 const { width } = Dimensions.get('window');
-
-const STATS = [
-  { icon: 'paw', label: 'Pets disponíveis', value: PETS.length, color: '#FFE0E0' },
-  { icon: 'home-outline', label: 'Adotados este mês', value: 23, color: '#E0F7F5' },
-  { icon: 'business-outline', label: 'ONGs parceiras', value: 3, color: '#FFF9E0' },
-];
 
 const CATEGORIAS = [
   { label: 'Todos', icon: '🐾', filter: null },
@@ -36,7 +32,30 @@ export default function HomeScreen({ navigation }) {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(0);
 
+  const { petsAdocao = [] } = usePets();
+  const todosPets = [...(petsAdocao || []), ...PETS]; // Combina pets do contexto com os estáticos
   const { isFavorite } = useFavorites();
+
+  const stats = [
+    {
+      icon: 'paw',
+      label: 'Pets disponíveis',
+      value: todosPets.length,
+      color: '#FFE0E0',
+    },
+    {
+      icon: 'home-outline',
+      label: 'Adotados este mês',
+      value: 23,
+      color: '#E0F7F5',
+    },
+    {
+      icon: 'business-outline',
+      label: 'ONGs parceiras',
+      value: 3,
+      color: '#FFF9E0',
+    },
+  ];
 
   useEffect(() => {
     Animated.parallel([
@@ -45,7 +64,7 @@ export default function HomeScreen({ navigation }) {
     ]).start();
   }, []);
 
-  const petsFiltrados = PETS.filter(p => {
+  const petsFiltrados = todosPets.filter(p => {
     const cat = CATEGORIAS[categoriaSelecionada];
     if (!cat.filter) return true;
     if (cat.campo === 'porte') return p.porte === cat.filter;
@@ -78,7 +97,7 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           <Text style={styles.heroSub}>
-            {PETS.length} pets esperando por um lar com amor
+            {todosPets.length} pets esperando por um lar com amor
           </Text>
 
           {/* Busca rápida — navega para a tela de lista */}
@@ -95,7 +114,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* Stats */}
       <View style={styles.statsRow}>
-        {STATS.map((s, i) => (
+        {stats.map((s, i) => (
           <Animated.View
             key={i}
             style={[styles.statCard, { backgroundColor: s.color, opacity: fadeAnim }]}
@@ -146,12 +165,23 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate('Detalhes', { pet })}
               activeOpacity={0.88}
             >
-              <Text style={styles.featuredEmoji}>{pet.emoji}</Text>
+              {
+                pet.foto ? (
+                  <Image
+                    source={{ uri: pet.foto }}
+                    style={styles.featuredImage}
+                  />
+                ) : (
+                  <Text style={styles.featuredEmoji}>
+                    {pet.emoji}
+                  </Text>
+                )
+              }
               <Text style={styles.featuredNome}>{pet.nome}</Text>
               <Text style={styles.featuredRaca}>{pet.raca}</Text>
               <View style={styles.featuredFooter}>
                 <Ionicons name="location-outline" size={12} color={COLORS.textLight} />
-                <Text style={styles.featuredCidade}>{pet.cidade.split(',')[0]}</Text>
+                <Text style={styles.featuredCidade}>{(pet.cidade || "Não informado").split(',')[0]}</Text>
               </View>
               {isFavorite(pet.id) && (
                 <View style={styles.favBadge}>
@@ -276,6 +306,13 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm + 4,
   },
   searchPlaceholder: { fontSize: FONTS.sizes.md, color: COLORS.textMuted },
+
+  featuredImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginBottom: SPACING.xs,
+  },
 
   statsRow: {
     flexDirection: 'row',

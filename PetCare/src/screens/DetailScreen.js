@@ -8,14 +8,15 @@ import {
   Alert,
   Animated,
   Share,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Notifications from 'expo-notifications';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
 import { CheckBadge, InfoBadge } from '../components/InfoBadge';
 import Button from '../components/Button';
 import { useFavorites } from './../context/Favorites';
+
 
 export default function DetailScreen({ route, navigation }) {
   const { pet } = route.params;
@@ -103,8 +104,18 @@ export default function DetailScreen({ route, navigation }) {
           </View>
 
           {/* Emoji grande */}
-          <Text style={styles.bigEmoji}>{pet.emoji}</Text>
-
+          {
+            pet.foto ? (
+              <Image
+                source={{ uri: pet.foto }}
+                style={styles.bigImage}
+              />
+            ) : (
+              <Text style={styles.bigEmoji}>
+                {pet.emoji}
+              </Text>
+            )
+          }
           {/* Nome e raça */}
           <View style={styles.heroInfo}>
             <Text style={styles.petNome}>{pet.nome}</Text>
@@ -113,7 +124,9 @@ export default function DetailScreen({ route, navigation }) {
               <Ionicons name="location-outline" size={14} color={COLORS.primary} />
               <Text style={styles.locationText}>{pet.cidade}</Text>
               <Text style={styles.dot}>•</Text>
-              <Text style={styles.ongText}>{pet.ong}</Text>
+              <Text style={styles.ongText}>
+                {pet.ong || 'PetCare'}
+              </Text>
             </View>
           </View>
         </LinearGradient>
@@ -124,7 +137,11 @@ export default function DetailScreen({ route, navigation }) {
             <InfoBadge icon="time-outline" label="Idade" value={pet.idade} color={COLORS.primaryLight} />
             <InfoBadge icon="resize-outline" label="Porte" value={pet.porte} color="#E0F7F5" />
             <InfoBadge icon={pet.sexo === 'Macho' ? 'male' : 'female'} label="Sexo" value={pet.sexo} color="#E8EAF6" />
-            <InfoBadge icon="calendar-outline" label="Entrada" value={pet.dataEntrada.split('-')[0]} color="#E8F5E9" />
+            <InfoBadge icon="calendar-outline" label="Entrada" value={
+              pet.dataEntrada
+                ? pet.dataEntrada.split('-')[0]
+                : 'Hoje'
+            } color="#E8F5E9" />
           </View>
 
           {/* Saúde */}
@@ -140,7 +157,9 @@ export default function DetailScreen({ route, navigation }) {
           {/* Sobre */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sobre {pet.nome} 💬</Text>
-            <Text style={styles.descricao}>{pet.descricao}</Text>
+            <Text style={styles.descricao}>
+              {pet.descricao || 'Sem descrição.'}
+            </Text>
           </View>
 
           {/* História */}
@@ -148,7 +167,9 @@ export default function DetailScreen({ route, navigation }) {
             <Text style={styles.sectionTitle}>História 📖</Text>
             <View style={styles.historiaCard}>
               <Ionicons name="heart" size={20} color={COLORS.primary} />
-              <Text style={styles.historia}>{pet.historia}</Text>
+              <Text style={styles.historia}>
+                {pet.historia || 'História não informada.'}
+              </Text>
             </View>
           </View>
 
@@ -203,11 +224,9 @@ export default function DetailScreen({ route, navigation }) {
           <View style={styles.bottomBtns}>
             <Button
               title={interesse ? '✅ Interesse enviado' : `Quero adotar ${pet.nome}!`}
-              onPress={handleAdotar}
+              onPress={() => navigation.navigate('AdoptionForm', { pet })}
               fullWidth
               icon={interesse ? 'checkmark-circle' : 'paw'}
-              disabled={interesse}
-              style={{ opacity: interesse ? 0.7 : 1 }}
             />
             <Button
               title="Ver ONGs no mapa"
@@ -272,6 +291,16 @@ const styles = StyleSheet.create({
   locationText: { fontSize: FONTS.sizes.sm, color: COLORS.text, fontWeight: '600' },
   dot: { color: COLORS.textMuted },
   ongText: { fontSize: FONTS.sizes.sm, color: COLORS.textLight },
+
+
+  bigImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    marginVertical: SPACING.md,
+    borderWidth: 4,
+    borderColor: COLORS.white,
+  },
 
   // Content
   content: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.xxl },

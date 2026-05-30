@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS } from '../data/theme';
@@ -20,7 +21,19 @@ export default function PetCard({ pet, onPress, onFavorite }) {
     >
       {/* Emoji do pet */}
       <View style={styles.emojiContainer}>
-        <Text style={styles.emoji}>{pet.emoji}</Text>
+        {
+          pet.foto ? (
+            <Image
+              source={{ uri: pet.foto }}
+              style={styles.petImage}
+            />
+          ) : (
+            <Text style={styles.emoji}>
+              {pet.emoji}
+            </Text>
+          )
+        }
+
         {/* Botão favorito */}
         <TouchableOpacity
           style={styles.heartBtn}
@@ -63,7 +76,9 @@ export default function PetCard({ pet, onPress, onFavorite }) {
         </View>
         <View style={styles.footer}>
           <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
-          <Text style={styles.footerText} numberOfLines={1}>{pet.cidade.split(',')[0]}</Text>
+          <Text style={styles.footerText} numberOfLines={1}>{pet.cidade
+            ? pet.cidade.split(',')[0]
+            : 'Sem cidade'}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -81,6 +96,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 4,
+  },
+  petImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   emojiContainer: {
     flexDirection: 'row',
